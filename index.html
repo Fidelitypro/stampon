@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stampon - Banque d'Images</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0f0f0f;
+            color: #e0e0e0;
+            min-height: 100vh;
+        }
+
+        /* ── Header ── */
+        header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            padding: 2rem;
+            text-align: center;
+            border-bottom: 2px solid #e94560;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+        header h1 { font-size: 2.2rem; font-weight: 700; letter-spacing: 2px; color: #fff; }
+        header h1 span { color: #e94560; }
+        header p { margin-top: 0.5rem; color: #8892b0; font-size: 0.95rem; }
+
+        /* ── Toolbar ── */
+        .toolbar {
+            max-width: 1400px; margin: 1.5rem auto; padding: 0 1.5rem;
+            display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
+        }
+        .search-box { flex: 1; min-width: 200px; position: relative; }
+        .search-box input {
+            width: 100%; padding: 0.75rem 1rem 0.75rem 2.8rem;
+            border: 1px solid #2a2a3a; border-radius: 10px;
+            background: #1a1a2e; color: #e0e0e0; font-size: 0.95rem;
+            transition: border-color 0.3s;
+        }
+        .search-box input:focus { outline: none; border-color: #e94560; }
+        .search-box::before {
+            content: "\01F50D"; position: absolute; left: 0.9rem;
+            top: 50%; transform: translateY(-50%); font-size: 1rem;
+        }
+        .stats { color: #8892b0; font-size: 0.9rem; white-space: nowrap; }
+        .btn-download-all {
+            padding: 0.75rem 1.5rem; background: #e94560; color: #fff;
+            border: none; border-radius: 10px; font-size: 0.9rem;
+            font-weight: 600; cursor: pointer; transition: background 0.3s, transform 0.15s;
+            white-space: nowrap;
+        }
+        .btn-download-all:hover { background: #c73652; transform: translateY(-1px); }
+
+        /* ── Content ── */
+        .content { max-width: 1400px; margin: 0 auto; padding: 1rem 1.5rem 3rem; }
+
+        /* ── Breadcrumb ── */
+        .breadcrumb { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .breadcrumb-item {
+            background: none; border: none; color: #8892b0; font-size: 0.9rem;
+            cursor: pointer; padding: 0.3rem 0.5rem; border-radius: 6px;
+            transition: color 0.2s, background 0.2s;
+        }
+        .breadcrumb-item:hover { color: #e94560; background: rgba(233,69,96,0.1); }
+        .breadcrumb-item.current { color: #ccd6f6; font-weight: 600; cursor: default; }
+        .breadcrumb-item.current:hover { background: none; color: #ccd6f6; }
+        .breadcrumb-sep { color: #4a4a5a; font-size: 0.8rem; }
+
+        /* ── Folder card ── */
+        .folder-card {
+            background: #1a1a2e; border-radius: 14px; border: 1px solid #2a2a3a;
+            padding: 1.5rem; cursor: pointer;
+            transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+            display: flex; flex-direction: column; align-items: center;
+            justify-content: center; gap: 0.8rem; min-height: 180px;
+        }
+        .folder-card:hover {
+            transform: translateY(-4px); border-color: #e94560;
+            box-shadow: 0 8px 30px rgba(233,69,96,0.15);
+        }
+        .folder-icon { font-size: 3rem; }
+        .folder-name {
+            font-size: 1rem; font-weight: 600; color: #ccd6f6;
+            text-transform: capitalize; text-align: center;
+        }
+        .folder-count {
+            font-size: 0.8rem; color: #8892b0; background: #2a2a3a;
+            padding: 0.15rem 0.7rem; border-radius: 20px;
+        }
+
+        /* ── Section title ── */
+        .section-title {
+            font-size: 1.3rem; font-weight: 700; color: #ccd6f6;
+            margin: 1.5rem 0 1rem; padding-bottom: 0.5rem;
+            border-bottom: 1px solid #2a2a3a; text-transform: capitalize;
+            display: flex; align-items: center; gap: 0.6rem;
+        }
+        .section-title .count {
+            font-size: 0.8rem; font-weight: 400; color: #8892b0;
+            background: #2a2a3a; padding: 0.15rem 0.6rem; border-radius: 20px;
+        }
+
+        /* ── Gallery Grid ── */
+        .gallery {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.5rem; margin-bottom: 1rem;
+        }
+
+        /* ── Card ── */
+        .card {
+            background: #1a1a2e; border-radius: 14px; overflow: hidden;
+            border: 1px solid #2a2a3a;
+            transition: transform 0.25s, border-color 0.25s, box-shadow 0.25s;
+        }
+        .card:hover {
+            transform: translateY(-4px); border-color: #e94560;
+            box-shadow: 0 8px 30px rgba(233,69,96,0.15);
+        }
+        .card-img-wrapper {
+            position: relative; width: 100%; aspect-ratio: 4/3;
+            background: #12121f; overflow: hidden; cursor: pointer;
+        }
+        .card-img-wrapper img {
+            width: 100%; height: 100%; object-fit: cover; transition: transform 0.4s;
+        }
+        .card:hover .card-img-wrapper img { transform: scale(1.05); }
+        .card-body {
+            padding: 1rem; display: flex; justify-content: space-between; align-items: center;
+        }
+        .card-name {
+            font-size: 0.85rem; color: #ccd6f6; overflow: hidden;
+            text-overflow: ellipsis; white-space: nowrap; max-width: 65%;
+        }
+        .btn-dl {
+            display: inline-flex; align-items: center; gap: 0.4rem;
+            padding: 0.5rem 1rem; background: transparent;
+            border: 1px solid #e94560; color: #e94560; border-radius: 8px;
+            font-size: 0.8rem; font-weight: 600; cursor: pointer;
+            transition: background 0.2s, color 0.2s; white-space: nowrap;
+        }
+        .btn-dl:hover { background: #e94560; color: #fff; }
+
+        /* ── Lightbox ── */
+        .lightbox {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.92); z-index: 1000;
+            justify-content: center; align-items: center;
+            flex-direction: column; gap: 1rem;
+        }
+        .lightbox.active { display: flex; }
+        .lightbox img {
+            max-width: 90vw; max-height: 80vh; border-radius: 8px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        }
+        .lightbox-close {
+            position: absolute; top: 1.5rem; right: 1.5rem;
+            background: none; border: none; color: #fff; font-size: 2rem;
+            cursor: pointer; width: 44px; height: 44px;
+            display: flex; align-items: center; justify-content: center;
+            border-radius: 50%; transition: background 0.2s;
+        }
+        .lightbox-close:hover { background: rgba(255,255,255,0.1); }
+        .lightbox-dl {
+            padding: 0.7rem 2rem; background: #e94560; color: #fff;
+            border: none; border-radius: 10px; font-size: 0.95rem;
+            font-weight: 600; cursor: pointer; transition: background 0.2s;
+        }
+        .lightbox-dl:hover { background: #c73652; }
+
+        /* ── Loading / Empty ── */
+        .loading, .empty { text-align: center; padding: 4rem 2rem; grid-column: 1/-1; }
+        .loading p, .empty p { color: #8892b0; font-size: 1.1rem; }
+        .spinner {
+            width: 40px; height: 40px; border: 3px solid #2a2a3a;
+            border-top-color: #e94560; border-radius: 50%;
+            animation: spin 0.8s linear infinite; margin: 0 auto 1rem;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── Responsive ── */
+        @media (max-width: 600px) {
+            header h1 { font-size: 1.5rem; }
+            .gallery { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
+            .toolbar { flex-direction: column; }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1><span>STAMP</span>ON</h1>
+    <p>Banque d'images &mdash; Parcourez et téléchargez librement</p>
+</header>
+
+<div class="toolbar">
+    <div class="search-box">
+        <input type="text" id="search" placeholder="Rechercher une image...">
+    </div>
+    <div class="stats" id="stats"></div>
+    <button class="btn-download-all" id="dlAll" style="display:none">⬇ Tout télécharger</button>
+</div>
+
+<div class="content" id="content">
+    <div class="loading">
+        <div class="spinner"></div>
+        <p>Chargement des images...</p>
+    </div>
+</div>
+
+<!-- Lightbox -->
+<div class="lightbox" id="lightbox">
+    <button class="lightbox-close" id="lbClose">&times;</button>
+    <img id="lbImg" src="" alt="">
+    <button class="lightbox-dl" id="lbDl">⬇ Télécharger</button>
+</div>
+
+<script>
+// ╔════════════════════════════════════════════════╗
+// ║  CONFIGURATION                                 ║
+// ╚════════════════════════════════════════════════╝
+const CONFIG = {
+    owner:  'Fidelitypro',
+    repo:   'stampon',
+    branch: 'main'
+};
+
+// Dossiers racines à scanner (ajoute ici si besoin : 'images3', etc.)
+const ROOT_FOLDERS = ['images', 'images2'];
+
+const IMAGE_EXT = ['.jpg','.jpeg','.png','.gif','.webp','.svg','.bmp','.tiff','.avif'];
+
+// ── Éléments DOM ──
+const content     = document.getElementById('content');
+const searchInput = document.getElementById('search');
+const statsEl     = document.getElementById('stats');
+const dlAllBtn    = document.getElementById('dlAll');
+const lightbox    = document.getElementById('lightbox');
+const lbImg       = document.getElementById('lbImg');
+const lbDl        = document.getElementById('lbDl');
+const lbClose     = document.getElementById('lbClose');
+
+let tree = null;          // arborescence fusionnée
+let currentPath = [];     // navigation : [] = accueil
+let searchResults = [];
+
+function isImage(name) {
+    return IMAGE_EXT.some(ext => name.toLowerCase().endsWith(ext));
+}
+
+// ══════════════════════════════════════════════════
+//  API GITHUB — 1 seul appel pour TOUT le dépôt
+// ══════════════════════════════════════════════════
+async function fetchFullTree() {
+    const url = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/git/trees/${CONFIG.branch}?recursive=1`;
+    const res = await fetch(url);
+    if (!res.ok) {
+        throw new Error(`Erreur ${res.status} — Vérifie que le dépôt ${CONFIG.owner}/${CONFIG.repo} est public.`);
+    }
+    const data = await res.json();
+    if (data.truncated) {
+        console.warn('Arborescence tronquée par GitHub (trop de fichiers).');
+    }
+    return data.tree; // [ { path, type: "blob"|"tree" }, ... ]
+}
+
+// ══════════════════════════════════════════════════
+//  Construire l'arbre depuis la liste plate
+// ══════════════════════════════════════════════════
+function buildTree(entries) {
+    const rawUrl = `https://raw.githubusercontent.com/${CONFIG.owner}/${CONFIG.repo}/${CONFIG.branch}`;
+    const root = { images: [], subfolders: {} };
+
+    for (const entry of entries) {
+        if (entry.type !== 'blob') continue;
+        if (!isImage(entry.path)) continue;
+
+        const parts = entry.path.split('/');
+
+        // On ne garde que les fichiers qui sont dans un des ROOT_FOLDERS
+        if (!ROOT_FOLDERS.includes(parts[0])) continue;
+
+        const fileName = parts.pop();
+
+        // Ignorer les dossiers cachés (.git, etc.)
+        if (parts.some(p => p.startsWith('.'))) continue;
+
+        // Naviguer / créer l'arborescence
+        let node = root;
+        for (const folder of parts) {
+            if (!node.subfolders[folder]) {
+                node.subfolders[folder] = { images: [], subfolders: {} };
+            }
+            node = node.subfolders[folder];
+        }
+
+        node.images.push({
+            name: fileName,
+            url: `${rawUrl}/${entry.path}`,
+            path: parts.join('/')
+        });
+    }
+
+    // On remonte : l'accueil montre directement les ROOT_FOLDERS
+    // Si un root folder est vide, on le retire
+    for (const rf of ROOT_FOLDERS) {
+        if (root.subfolders[rf] && countImages(root.subfolders[rf]) === 0) {
+            delete root.subfolders[rf];
+        }
+    }
+
+    return root;
+}
+
+// ── Compter images récursivement ──
+function countImages(node) {
+    let c = node.images.length;
+    for (const sub of Object.values(node.subfolders)) c += countImages(sub);
+    return c;
+}
+
+// ── Collecter toutes les images (pour la recherche) ──
+function collectAllImages(node, folderPath) {
+    let all = node.images.map(img => ({ ...img, folderPath }));
+    for (const [name, sub] of Object.entries(node.subfolders)) {
+        all = all.concat(collectAllImages(sub, folderPath ? `${folderPath} / ${name}` : name));
+    }
+    return all;
+}
+
+// ── Noeud courant selon le chemin ──
+function getCurrentNode() {
+    let node = tree;
+    for (const seg of currentPath) {
+        if (!node.subfolders[seg]) return node; // sécurité
+        node = node.subfolders[seg];
+    }
+    return node;
+}
+
+// ══════════════════════════════════════════════════
+//  INIT — 1 appel API, on construit tout côté client
+// ══════════════════════════════════════════════════
+async function init() {
+    try {
+        const entries = await fetchFullTree();
+        tree = buildTree(entries);
+
+        if (Object.keys(tree.subfolders).length === 0 && tree.images.length === 0) {
+            throw new Error('Aucune image trouvée dans images/ ou images2/.');
+        }
+
+        render();
+    } catch (err) {
+        content.innerHTML = `
+            <div class="empty">
+                <p>Impossible de charger les images.</p>
+                <p style="font-size:0.85rem; margin-top:0.5rem;">${err.message}</p>
+            </div>`;
+    }
+}
+
+// ══════════════════════════════════════════════════
+//  RENDER
+// ══════════════════════════════════════════════════
+function render() {
+    const q = searchInput.value.toLowerCase().trim();
+    q ? renderSearch(q) : renderFolder();
+}
+
+// ── Render dossier ──
+function renderFolder() {
+    const node = getCurrentNode();
+    const folderNames = Object.keys(node.subfolders).sort();
+    const images = node.images;
+    const totalHere = countImages(node);
+
+    statsEl.textContent = `${totalHere} image${totalHere > 1 ? 's' : ''}`;
+    dlAllBtn.style.display = images.length > 0 ? 'inline-block' : 'none';
+
+    let html = '';
+
+    // Breadcrumb
+    html += '<div class="breadcrumb">';
+    html += `<button class="breadcrumb-item ${currentPath.length === 0 ? 'current' : ''}" data-path="">📁 Accueil</button>`;
+    currentPath.forEach((seg, i) => {
+        const pathUpTo = currentPath.slice(0, i + 1).join('/');
+        const isCurrent = i === currentPath.length - 1;
+        html += `<span class="breadcrumb-sep">›</span>`;
+        html += `<button class="breadcrumb-item ${isCurrent ? 'current' : ''}" data-path="${pathUpTo}">${seg}</button>`;
+    });
+    html += '</div>';
+
+    // Sous-dossiers
+    if (folderNames.length > 0) {
+        html += '<div class="gallery">';
+        for (const name of folderNames) {
+            const sub = node.subfolders[name];
+            const imgCount = countImages(sub);
+            const subCount = Object.keys(sub.subfolders).length;
+            html += `
+                <div class="folder-card" data-folder="${name}">
+                    <div class="folder-icon">📁</div>
+                    <div class="folder-name">${name}</div>
+                    <span class="folder-count">${imgCount} image${imgCount > 1 ? 's' : ''}${subCount > 0 ? ` · ${subCount} dossier${subCount > 1 ? 's' : ''}` : ''}</span>
+                </div>`;
+        }
+        html += '</div>';
+    }
+
+    // Images
+    if (images.length > 0) {
+        if (folderNames.length > 0) {
+            html += `<div class="section-title">Images ici <span class="count">${images.length}</span></div>`;
+        }
+        html += renderImageGrid(images);
+    }
+
+    if (folderNames.length === 0 && images.length === 0) {
+        html += '<div class="empty"><p>Ce dossier est vide.</p></div>';
+    }
+
+    content.innerHTML = html;
+    bindEvents();
+}
+
+// ── Render recherche ──
+function renderSearch(q) {
+    const all = collectAllImages(tree, '');
+    const filtered = all.filter(img =>
+        img.name.toLowerCase().includes(q) || img.folderPath.toLowerCase().includes(q)
+    );
+
+    statsEl.textContent = `${filtered.length} résultat${filtered.length > 1 ? 's' : ''}`;
+    dlAllBtn.style.display = filtered.length > 0 ? 'inline-block' : 'none';
+
+    if (filtered.length === 0) {
+        content.innerHTML = '<div class="empty"><p>Aucune image trouvée.</p></div>';
+        return;
+    }
+
+    const groups = {};
+    for (const img of filtered) {
+        const key = img.folderPath || 'Racine';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(img);
+    }
+
+    let html = '';
+    for (const [folder, imgs] of Object.entries(groups)) {
+        html += `<div class="section-title">${folder} <span class="count">${imgs.length}</span></div>`;
+        html += renderImageGrid(imgs);
+    }
+
+    content.innerHTML = html;
+    searchResults = filtered;
+    bindEvents();
+}
+
+// ── Grille d'images ──
+function renderImageGrid(images) {
+    return `<div class="gallery">${images.map(img => `
+        <div class="card">
+            <div class="card-img-wrapper" data-url="${img.url}" data-name="${img.name}">
+                <img src="${img.url}" alt="${img.name}" loading="lazy">
+            </div>
+            <div class="card-body">
+                <span class="card-name" title="${img.name}">${img.name}</span>
+                <button class="btn-dl" data-url="${img.url}" data-name="${img.name}">⬇ DL</button>
+            </div>
+        </div>`).join('')}</div>`;
+}
+
+// ══════════════════════════════════════════════════
+//  EVENTS
+// ══════════════════════════════════════════════════
+function bindEvents() {
+    // Dossiers
+    content.querySelectorAll('.folder-card').forEach(el => {
+        el.addEventListener('click', () => {
+            currentPath.push(el.dataset.folder);
+            render();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+    });
+
+    // Breadcrumb
+    content.querySelectorAll('.breadcrumb-item:not(.current)').forEach(el => {
+        el.addEventListener('click', () => {
+            const p = el.dataset.path;
+            currentPath = p ? p.split('/') : [];
+            render();
+        });
+    });
+
+    // Lightbox
+    content.querySelectorAll('.card-img-wrapper').forEach(el => {
+        el.addEventListener('click', () => openLightbox(el.dataset.url, el.dataset.name));
+    });
+
+    // Download
+    content.querySelectorAll('.btn-dl').forEach(btn => {
+        btn.addEventListener('click', () => downloadFile(btn.dataset.url, btn.dataset.name));
+    });
+}
+
+// ── Download ──
+async function downloadFile(url, name) {
+    try {
+        const res = await fetch(url);
+        const blob = await res.blob();
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(a.href);
+    } catch {
+        window.open(url, '_blank');
+    }
+}
+
+// ── Lightbox ──
+function openLightbox(url, name) {
+    lbImg.src = url;
+    lbImg.alt = name;
+    lbDl.dataset.url = url;
+    lbDl.dataset.name = name;
+    lightbox.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeLightbox() {
+    lightbox.classList.remove('active');
+    document.body.style.overflow = '';
+    lbImg.src = '';
+}
+
+lbClose.addEventListener('click', closeLightbox);
+lbDl.addEventListener('click', () => downloadFile(lbDl.dataset.url, lbDl.dataset.name));
+lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
+
+// ── Search ──
+searchInput.addEventListener('input', () => render());
+
+// ── Download all visible ──
+dlAllBtn.addEventListener('click', () => {
+    const q = searchInput.value.toLowerCase().trim();
+    const targets = q ? searchResults : getCurrentNode().images;
+    targets.forEach((img, i) => {
+        setTimeout(() => downloadFile(img.url, img.name), i * 300);
+    });
+});
+
+// ── GO ──
+init();
+</script>
+
+</body>
+</html>
