@@ -14,7 +14,6 @@
             min-height: 100vh;
         }
 
-        /* ── Header ── */
         header {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
             padding: 2rem;
@@ -28,7 +27,6 @@
         header h1 span { color: #e94560; }
         header p { margin-top: 0.5rem; color: #8892b0; font-size: 0.95rem; }
 
-        /* ── Toolbar ── */
         .toolbar {
             max-width: 1400px; margin: 1.5rem auto; padding: 0 1.5rem;
             display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;
@@ -54,10 +52,8 @@
         }
         .btn-download-all:hover { background: #c73652; transform: translateY(-1px); }
 
-        /* ── Content ── */
         .content { max-width: 1400px; margin: 0 auto; padding: 1rem 1.5rem 3rem; }
 
-        /* ── Breadcrumb ── */
         .breadcrumb { display: flex; align-items: center; gap: 0.4rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
         .breadcrumb-item {
             background: none; border: none; color: #8892b0; font-size: 0.9rem;
@@ -69,7 +65,6 @@
         .breadcrumb-item.current:hover { background: none; color: #ccd6f6; }
         .breadcrumb-sep { color: #4a4a5a; font-size: 0.8rem; }
 
-        /* ── Folder card ── */
         .folder-card {
             background: #1a1a2e; border-radius: 14px; border: 1px solid #2a2a3a;
             padding: 1.5rem; cursor: pointer;
@@ -91,7 +86,6 @@
             padding: 0.15rem 0.7rem; border-radius: 20px;
         }
 
-        /* ── Section title ── */
         .section-title {
             font-size: 1.3rem; font-weight: 700; color: #ccd6f6;
             margin: 1.5rem 0 1rem; padding-bottom: 0.5rem;
@@ -103,13 +97,11 @@
             background: #2a2a3a; padding: 0.15rem 0.6rem; border-radius: 20px;
         }
 
-        /* ── Gallery Grid ── */
         .gallery {
             display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
             gap: 1.5rem; margin-bottom: 1rem;
         }
 
-        /* ── Card ── */
         .card {
             background: #1a1a2e; border-radius: 14px; overflow: hidden;
             border: 1px solid #2a2a3a;
@@ -143,7 +135,6 @@
         }
         .btn-dl:hover { background: #e94560; color: #fff; }
 
-        /* ── Lightbox ── */
         .lightbox {
             display: none; position: fixed; inset: 0;
             background: rgba(0,0,0,0.92); z-index: 1000;
@@ -170,7 +161,6 @@
         }
         .lightbox-dl:hover { background: #c73652; }
 
-        /* ── Loading / Empty ── */
         .loading, .empty { text-align: center; padding: 4rem 2rem; grid-column: 1/-1; }
         .loading p, .empty p { color: #8892b0; font-size: 1.1rem; }
         .spinner {
@@ -180,7 +170,6 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── Responsive ── */
         @media (max-width: 600px) {
             header h1 { font-size: 1.5rem; }
             .gallery { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 1rem; }
@@ -210,12 +199,14 @@
     </div>
 </div>
 
-<!-- Lightbox -->
 <div class="lightbox" id="lightbox">
     <button class="lightbox-close" id="lbClose">&times;</button>
     <img id="lbImg" src="" alt="">
     <button class="lightbox-dl" id="lbDl">⬇ Télécharger</button>
 </div>
+
+<!-- LISTE DES FICHIERS GÉNÉRÉE PAR generate-filelist.bat -->
+<script src="filelist.js"></script>
 
 <script>
 // ╔════════════════════════════════════════════════╗
@@ -227,12 +218,8 @@ const CONFIG = {
     branch: 'main'
 };
 
-// Dossiers racines à scanner (ajoute ici si besoin : 'images3', etc.)
-const ROOT_FOLDERS = ['images', 'images2'];
-
 const IMAGE_EXT = ['.jpg','.jpeg','.png','.gif','.webp','.svg','.bmp','.tiff','.avif'];
 
-// ── Éléments DOM ──
 const content     = document.getElementById('content');
 const searchInput = document.getElementById('search');
 const statsEl     = document.getElementById('stats');
@@ -242,8 +229,8 @@ const lbImg       = document.getElementById('lbImg');
 const lbDl        = document.getElementById('lbDl');
 const lbClose     = document.getElementById('lbClose');
 
-let tree = null;          // arborescence fusionnée
-let currentPath = [];     // navigation : [] = accueil
+let tree = null;
+let currentPath = [];
 let searchResults = [];
 
 function isImage(name) {
@@ -251,43 +238,23 @@ function isImage(name) {
 }
 
 // ══════════════════════════════════════════════════
-//  API GITHUB — 1 seul appel pour TOUT le dépôt
+//  Construire l'arbre depuis FILE_LIST (filelist.js)
+//  Aucun appel API ! Tout est en local.
 // ══════════════════════════════════════════════════
-async function fetchFullTree() {
-    const url = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/git/trees/${CONFIG.branch}?recursive=1`;
-    const res = await fetch(url);
-    if (!res.ok) {
-        throw new Error(`Erreur ${res.status} — Vérifie que le dépôt ${CONFIG.owner}/${CONFIG.repo} est public.`);
-    }
-    const data = await res.json();
-    if (data.truncated) {
-        console.warn('Arborescence tronquée par GitHub (trop de fichiers).');
-    }
-    return data.tree; // [ { path, type: "blob"|"tree" }, ... ]
-}
-
-// ══════════════════════════════════════════════════
-//  Construire l'arbre depuis la liste plate
-// ══════════════════════════════════════════════════
-function buildTree(entries) {
+function buildTree(files) {
     const rawUrl = `https://raw.githubusercontent.com/${CONFIG.owner}/${CONFIG.repo}/${CONFIG.branch}`;
     const root = { images: [], subfolders: {} };
 
-    for (const entry of entries) {
-        if (entry.type !== 'blob') continue;
-        if (!isImage(entry.path)) continue;
+    for (const filePath of files) {
+        if (!isImage(filePath)) continue;
 
-        const parts = entry.path.split('/');
-
-        // On ne garde que les fichiers qui sont dans un des ROOT_FOLDERS
-        if (!ROOT_FOLDERS.includes(parts[0])) continue;
-
+        const parts = filePath.split('/');
         const fileName = parts.pop();
 
-        // Ignorer les dossiers cachés (.git, etc.)
+        // Ignorer dossiers cachés
         if (parts.some(p => p.startsWith('.'))) continue;
 
-        // Naviguer / créer l'arborescence
+        // Créer l'arborescence
         let node = root;
         for (const folder of parts) {
             if (!node.subfolders[folder]) {
@@ -298,30 +265,20 @@ function buildTree(entries) {
 
         node.images.push({
             name: fileName,
-            url: `${rawUrl}/${entry.path}`,
+            url: `${rawUrl}/${filePath}`,
             path: parts.join('/')
         });
-    }
-
-    // On remonte : l'accueil montre directement les ROOT_FOLDERS
-    // Si un root folder est vide, on le retire
-    for (const rf of ROOT_FOLDERS) {
-        if (root.subfolders[rf] && countImages(root.subfolders[rf]) === 0) {
-            delete root.subfolders[rf];
-        }
     }
 
     return root;
 }
 
-// ── Compter images récursivement ──
 function countImages(node) {
     let c = node.images.length;
     for (const sub of Object.values(node.subfolders)) c += countImages(sub);
     return c;
 }
 
-// ── Collecter toutes les images (pour la recherche) ──
 function collectAllImages(node, folderPath) {
     let all = node.images.map(img => ({ ...img, folderPath }));
     for (const [name, sub] of Object.entries(node.subfolders)) {
@@ -330,26 +287,28 @@ function collectAllImages(node, folderPath) {
     return all;
 }
 
-// ── Noeud courant selon le chemin ──
 function getCurrentNode() {
     let node = tree;
     for (const seg of currentPath) {
-        if (!node.subfolders[seg]) return node; // sécurité
+        if (!node.subfolders[seg]) return node;
         node = node.subfolders[seg];
     }
     return node;
 }
 
 // ══════════════════════════════════════════════════
-//  INIT — 1 appel API, on construit tout côté client
+//  INIT — Aucun appel API, lecture de filelist.js
 // ══════════════════════════════════════════════════
-async function init() {
+function init() {
     try {
-        const entries = await fetchFullTree();
-        tree = buildTree(entries);
+        if (typeof FILE_LIST === 'undefined') {
+            throw new Error('filelist.js introuvable. Lance generate-filelist.bat puis uploade filelist.js sur GitHub.');
+        }
 
-        if (Object.keys(tree.subfolders).length === 0 && tree.images.length === 0) {
-            throw new Error('Aucune image trouvée dans images/ ou images2/.');
+        tree = buildTree(FILE_LIST);
+
+        if (countImages(tree) === 0) {
+            throw new Error('Aucune image trouvée dans la liste.');
         }
 
         render();
@@ -370,7 +329,6 @@ function render() {
     q ? renderSearch(q) : renderFolder();
 }
 
-// ── Render dossier ──
 function renderFolder() {
     const node = getCurrentNode();
     const folderNames = Object.keys(node.subfolders).sort();
@@ -426,7 +384,6 @@ function renderFolder() {
     bindEvents();
 }
 
-// ── Render recherche ──
 function renderSearch(q) {
     const all = collectAllImages(tree, '');
     const filtered = all.filter(img =>
@@ -459,7 +416,6 @@ function renderSearch(q) {
     bindEvents();
 }
 
-// ── Grille d'images ──
 function renderImageGrid(images) {
     return `<div class="gallery">${images.map(img => `
         <div class="card">
@@ -477,7 +433,6 @@ function renderImageGrid(images) {
 //  EVENTS
 // ══════════════════════════════════════════════════
 function bindEvents() {
-    // Dossiers
     content.querySelectorAll('.folder-card').forEach(el => {
         el.addEventListener('click', () => {
             currentPath.push(el.dataset.folder);
@@ -486,7 +441,6 @@ function bindEvents() {
         });
     });
 
-    // Breadcrumb
     content.querySelectorAll('.breadcrumb-item:not(.current)').forEach(el => {
         el.addEventListener('click', () => {
             const p = el.dataset.path;
@@ -495,18 +449,15 @@ function bindEvents() {
         });
     });
 
-    // Lightbox
     content.querySelectorAll('.card-img-wrapper').forEach(el => {
         el.addEventListener('click', () => openLightbox(el.dataset.url, el.dataset.name));
     });
 
-    // Download
     content.querySelectorAll('.btn-dl').forEach(btn => {
         btn.addEventListener('click', () => downloadFile(btn.dataset.url, btn.dataset.name));
     });
 }
 
-// ── Download ──
 async function downloadFile(url, name) {
     try {
         const res = await fetch(url);
@@ -523,7 +474,6 @@ async function downloadFile(url, name) {
     }
 }
 
-// ── Lightbox ──
 function openLightbox(url, name) {
     lbImg.src = url;
     lbImg.alt = name;
@@ -544,10 +494,8 @@ lbDl.addEventListener('click', () => downloadFile(lbDl.dataset.url, lbDl.dataset
 lightbox.addEventListener('click', e => { if (e.target === lightbox) closeLightbox(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeLightbox(); });
 
-// ── Search ──
 searchInput.addEventListener('input', () => render());
 
-// ── Download all visible ──
 dlAllBtn.addEventListener('click', () => {
     const q = searchInput.value.toLowerCase().trim();
     const targets = q ? searchResults : getCurrentNode().images;
@@ -556,7 +504,6 @@ dlAllBtn.addEventListener('click', () => {
     });
 });
 
-// ── GO ──
 init();
 </script>
 
